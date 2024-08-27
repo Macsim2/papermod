@@ -18,11 +18,24 @@ showbreadcrumbs: false
 ## Signal and System
 * [FFT](/posts/tech/test/)
 
+
+## ASR
+* Beamsearch
+* Wav2vec 2.0
+* TLG HLG?
+
+
 ## DeepLearning
 * linear regression
+* SGD
+* flash attention
+
 
 ## MachineLearning 
+
 
 ## Algorithms
 * BOJ
     * [1755](/posts/tech/tmp/)
+
+## 
