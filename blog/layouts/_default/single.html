@@ -23,6 +23,7 @@
             {{- if not (.Param "hideMeta") }}
             <div class="post-meta">
                 {{- partial "post_meta.html" . -}}
+                {{ partial "katex.html" . }}
                 <span style="opacity: 0.8;">
                     <span id="post_meta_style_7">
                         &nbsp;&nbsp;
