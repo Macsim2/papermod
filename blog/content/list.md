@@ -36,6 +36,7 @@ showbreadcrumbs: false
 
 ## Algorithms
 * BOJ
-    * [1755](/posts/tech/tmp/)
+    * [LCS2](/posts/tech/algorithm/boj/LCS2)
+    * [용액](/posts/tech/algorithm/boj/용액)
 
 ## 
