@@ -101,16 +101,10 @@ img {
 }
 
 .dark img {
-    opacity: 0.8;
+    opacity: 1;  /* 호버시 */
     border: 1px solid var(--border);
 }
 
-img:active {
-    transform: scale(1.25, 1.25);
-    opacity: 1;
-    z-index: 999;
-    border: 1px solid var(--border);
-}
 
 @media screen and (min-width: 768px) {
     ::-webkit-scrollbar {
