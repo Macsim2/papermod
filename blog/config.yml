@@ -35,27 +35,31 @@ menu:
       name: 🏠 home
       url: /
       weight: 2
-    - identifier: list
-      name: list
-      url: list
-      weight: 3
-    - identifier: posts
-      name: 📚 posts
-      url: posts
-      weight: 4
     - identifier: about
       name: 🙋 about
-      url: about
-      weight: 50
+      url: /about/
+      weight: 3
+    - identifier: archives
+      name: archives
+      url: /archives/  # /로 시작하면 content 폴더 아래에 있는 파일을 찾음 / 로 시작하지 않으면 미리 만들어 뒀던 list file을 사용하는듯
+      weight: 4
+    - identifier: posts
+      name: 📚 posts
+      url: /posts/
+      weight: 5
     - identifier: tags
       name: 🧩 tags
-      url: tags
-      weight: 15
-    - identifier: archives
-      name: ⏱️ archives
-      url: archives/
-      weight: 20
-    #- identifier: search
+      url: /tags/
+      weight: 6
+    - identifier: search
+      name: ⏱️ search
+      url: /search/
+      weight: 7
+    # - identifier: archives
+    #   name: ⏱️ archives
+    #   url: archives/
+    #   weight: 20
+    # - identifier: search
     #  name: ⏱️ search
     #  url: search/
     #  weight: 20
@@ -103,7 +107,6 @@ params:
     enabled: true
     title: Hi, there
     subtitle:
-    # subtitle: "🧨学而时习之，不亦说乎？有朋自远方来，不亦乐乎？<br/>👇联系方式"
     imageUrl: "img/altman.png"
     imageTitle:
     imageWidth: 1500
