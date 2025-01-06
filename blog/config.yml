@@ -166,6 +166,11 @@ params:
     id:  # 填写自己的twikoo id
     region:  # 环境地域，默认为 ap-shanghai，如果您的环境地域不是上海，需传此参数，请看twikoo官方文档
 
+  # 댓글 설정
+  disqus:
+    enable: true
+    shortname: "basic-18"  # 여기서 "your-disqus-shortname"을 실제 Disqus Shortname으로 교체하세요.
+
 taxonomies:
   category: categories
   tag: tags
