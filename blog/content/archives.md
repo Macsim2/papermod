@@ -15,9 +15,20 @@ showbreadcrumbs: false
 ---
 
 
-## Signal and System
-* [FFT](/posts/tech/test/)
+## Signal Processing
+* [Sound](/posts/tech/signal/sound)
+* [FT](/posts/tech/test/)
+* [Sampling Theorem]
+* [Filtering]
+* [Convolution]
+* [DFT and FFT]
+* [라플라스 변환 and Z-변환]
+* []
 
+## Linear Algebra
+* [Eigenvalues & Eigenvectors] => 실제 응용: 구글의 PageRank 알고리즘, 주성분 분석(PCA), 진동 모드 분석
+* [SVD]
+* []
 
 ## ASR
 * Beamsearch

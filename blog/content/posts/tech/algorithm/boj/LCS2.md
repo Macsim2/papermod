@@ -51,3 +51,25 @@ LCS가 여러 가지인 경우에는 아무거나 출력하고, LCS의 길이가
 LCS 문제는 2차원 배열을 만들고, 원소의 data type은 int형을 사용하여 LCS 길이를 구할 수 있었다.
 그런데 LCS2는 2차원 배열을 사용하되, 원소의 data type를 string 을 사용해 LCS를 직접 구하는 방법을 사용할 수 있다.
 
+
+$$\f\relax{x} = \int_{-\infty}^\infty
+    \f\hat\xi\,e^{2 \pi i \xi x}
+    \,d\xi$$
+
+
+$$A=\begin{bmatrix}
+0 & 1 & 2 \\\
+3 & 4 & 5 \\\
+6 & 7 & 8
+\end{bmatrix}
+$$
+
+
+$$\exp_a b = a^b$$
+$\sum\nolimits_{k=1}^N k^2$
+
+
+$$\begin{equation}
+f(x) = x^2+4x+16
+\end{equation}$$
+
