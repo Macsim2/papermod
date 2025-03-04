@@ -6,9 +6,9 @@ author: ["macsim"]
 keywords: 
 - 
 categories: 
-- 
+- tech
 tags: 
-- 
+- sound
 description: "about sound"
 weight:
 slug: ""

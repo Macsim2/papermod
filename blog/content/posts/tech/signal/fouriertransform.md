@@ -6,9 +6,9 @@ author: ["macsim"]
 keywords: 
 - 
 categories: 
-- 
+- tech
 tags: 
-- 
+- fourier_transform
 description: "about FT"
 weight:
 slug: ""
