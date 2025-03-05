@@ -25,7 +25,7 @@ disableShare: true # 底部不显示分享栏
 * []
 
 ## Linear Algebra
-* [Eigenvalues & Eigenvectors] => 실제 응용: 구글의 PageRank 알고리즘, 주성분 분석(PCA), 진동 모드 분석
+* [Eigenvalues & Eigenvectors](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
 * [SVD]
 * []
 
