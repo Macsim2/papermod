@@ -1,5 +1,5 @@
 baseURL: https://macsim2.github.io/
-languageCode: en-us # en-us
+languageCode: ko-kr # Changed from en-us to ko-kr
 title: macsim's Blog
 theme: hugo-PaperMod
 
@@ -26,7 +26,7 @@ permalinks: # 访问博客时网址的显示形式
   post: "/:title/"
   # post: "/:year/:month/:day/:title/"
 
-defaultContentLanguage: en # 最顶部首先展示的语言页面
+defaultContentLanguage: ko # Changed from en to ko
 defaultContentLanguageInSubdir: false
 
 menu:

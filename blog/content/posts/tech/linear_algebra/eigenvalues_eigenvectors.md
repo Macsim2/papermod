@@ -177,8 +177,46 @@ $\begin{bmatrix} -1 & 2 & 0 \\\\ 0 & 1 & 0 \\\\ 2 & -4 & 0 \end{bmatrix}\begin{b
 
 ## 특이값 분해(SVD)와의 관계
 
-특이값 분해는 고유값 분해의 일반화로, 정방행렬이 아닌 행렬에도 적용할 수 있다:
+특이값 분해는 고유값 분해의 일반화로, 정방행렬이 아닌 행렬에도 적용할 수 있다.
 
+SVD(특이값 분해)는 임의의 행렬 A를 다음과 같이 세 개의 행렬로 분해합니다.
 $$A = U\Sigma V^T$$
 
-여기서 $\Sigma$의 대각 원소들(특이값들)은 $A^TA$의 고유값들의 제곱근이다.
+* $U$ 정의: $A$ 행렬이 $m \times n$ 크기라면, $U$는 $m \times m$ 크기의 직교행렬입니다.
+* $\Sigma$ 정의: $\Sigma$는 $m \times n$ 크기의 대각행렬인데, NumPy에서는 대각원소만 1차원 배열 S로 반환합니다.
+* $V^T$ 정의: $V$는 $n \times n$ 크기의 직교행렬이며, $V^T$는 이의 전치행렬입니다.
+<!-- 여기서 $\Sigma$의 대각 원소들(특이값들)은 $A^TA$의 고유값들의 제곱근이다. -->
+
+많은 응용에서는 전체 SVD 대신 압축된 형태인 "압축형 SVD"(compact SVD)나 "절단 SVD"(truncated SVD)를 사용한다.
+$$A = U_r \Sigma_r V_r^T$$
+여기서 $r$은 행렬의 랭크이고, $U_r$은 처음 $r$개의 왼쪽 특이벡터, $\Sigma_r$은 처음 $r$개의 특이값을 포함하는 $r \times r$ 대각행렬, $V_r$은 처음 $r$개의 오른쪽 특이벡터를 포함한다.
+
+## 고유값 분해와의 비교
+| 특이값 분해 (SVD) | 고유값 분해 (Eigendecomposition) |
+|:-------------:|:------------------------:|
+| 모든 행렬에 적용 가능 | 정방행렬에만 적용 가능 |
+| $A = U\Sigma V^T$ | $A = PDP^{-1}$ |
+| $U$, $V$는 직교행렬 | $P$는 일반적으로 직교행렬이 아님 |
+| 특이값은 항상 실수이고 음이 아님 | 고유값은 복소수일 수 있음 |
+| 수치적으로 안정적 | 일부 행렬에서는 불안정할 수 있음 |
+
+```python
+import numpy as np
+
+# 행렬 정의
+A = np.array([[4, 0, 3], [-3, -5, 0]])
+
+# SVD 계산
+U, S, Vt = np.linalg.svd(A)
+
+print("U =\n", U)
+print("S =\n", S)  # 특이값만 반환
+print("V^T =\n", Vt)
+
+# 원 행렬 재구성
+S_matrix = np.zeros((A.shape[0], A.shape[1]))
+np.fill_diagonal(S_matrix, S)
+A_reconstructed = U @ S_matrix @ Vt
+
+print("A_reconstructed =\n", A_reconstructed)
+```
