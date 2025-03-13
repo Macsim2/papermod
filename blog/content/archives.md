@@ -29,24 +29,32 @@ disableShare: true # 底部不显示分享栏
 * [SVD]
 * []
 
-## ASR
-* Beamsearch
-* Wav2vec 2.0
-* TLG HLG?
-
-
-## DeepLearning
+## Deep Learning
 * linear regression
 * SGD
 * flash attention
 
 
-## MachineLearning 
+## Machine Learning 
+* L1 & L2 Regularization
+* MLE & Bayesian Series (1/3) - Maximum Likelihood Estimation (MLE)
+* Principle Component Analysis (PCA) and AutoEncoder (AE)
+* Precision, Recall and F1 Score
 
+## ASR
+* Beamsearch
+* Wav2vec 2.0
+* TLG HLG?
 
 ## Algorithms
 * BOJ
     * [LCS2](/posts/tech/algorithm/boj/LCS2)
     * [용액](/posts/tech/algorithm/boj/용액)
+
+## Quantum
+
+## strokes
+
+## immune system
 
 ## 
