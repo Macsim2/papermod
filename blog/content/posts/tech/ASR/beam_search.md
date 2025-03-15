@@ -30,17 +30,6 @@ cover:
     relative: false
 ---
 
-< Index >
-
-
-* Beam Search
-    * [Beam Search의 기본 개념과 원리](#Beam-Search의-기본-개념과-원리)
-        * [Beam Search란 무엇인가?](#Beam-Search란-무엇인가?)
-        * [Greedy Search와의 차이점](#greedy-search와의-차이점)
-        * [Beam Search의 작동 원리](#Beam-Search의-작동-원리)
-        * [Beam Width(Size)의 의미와 선택](#beam-widthsize의-의미와-선택)
-    * [ASR 모델 아키텍처별 Beam Search 적용](#asr-모델-아키텍처별-beam-search-적용)
-
 
 
 ## Beam Search의 기본 개념과 원리

@@ -30,24 +30,12 @@ cover:
     relative: false
 ---
 
-< Index >
-
-
-* Beam Search
-    * [Beam Search의 기본 개념과 원리](#Beam-Search의-기본-개념과-원리)
-        * [Beam Search란 무엇인가?](#Beam-Search란-무엇인가?)
-        * [Greedy Search와의 차이점](#greedy-search와의-차이점)
-        * [Beam Search의 작동 원리](#Beam-Search의-작동-원리)
-        * [Beam Width(Size)의 의미와 선택](#beam-widthsize의-의미와-선택)
-    * [ASR 모델 아키텍처별 Beam Search 적용](#asr-모델-아키텍처별-beam-search-적용)
-
-
 
 ## Viterbi 알고리즘의 기본 원리
 Viterbi 알고리즘은 HMM(Hidden Markov Model)에서 가장 확률이 높은 은닉 상태 시퀀스를 찾기 위한 동적 프로그래밍 알고리즘이다. ASR에서는 관측된 음향 특징(acoustic features)이 주어졌을 때, 가장 확률이 높은 단어나 음소 시퀀스를 찾는 데 사용된다. 
 
 
-### Viterbi 알고리즘의 주요 구성요소:
+### Viterbi 알고리즘의 주요 구성요소
 1. 상태 공간: HMM의 가능한 모든 상태들 ($S = \{s_1, s_2, ..., s_N\}$)
 2. 관측 시퀀스: 시간에 따른 음향 특징 벡터 ($O = o_1, o_2, ..., o_T$)
 3. 상태 전이 확률: 한 상태에서 다른 상태로 전이할 확률 ($a_{ij}$)
@@ -134,30 +122,36 @@ $$= \max[0.014, 0.0084] \times 0.45 = 0.014 \times 0.45 = 0.0063$$
 
 ### 상태 전이 확률 구하기
 
-1. 전문가 지식 기반 초기화:<br>
-사용 시점: 모델 학습 시작 전 초기값 설정<br>
-3-상태 left-to-right HMM 구조에서:<br>
-자기 루프(self-loop): $a_{ii} \approx 0.6$<br>
-다음 상태로 전이: $a_{i,i+1} \approx 0.4$<br>
+1. 전문가 지식 기반 초기화
+
+사용 시점: 모델 학습 시작 전 초기값 설정
+
+- 3-상태 left-to-right HMM 구조에서:
+- 자기 루프(self-loop): $a_{ii} \approx 0.6$
+- 다음 상태로 전이: $a_{i,i+1} \approx 0.4$
 Kaldi의 topo 파일에 이러한 초기값 정의
 
-2. Baum-Welch 알고리즘 (EM 기반):
-사용 시점: 모델 학습 과정<br>
-Baum-Welch 알고리즘 (EM 알고리즘의 HMM 버전):<br>
-E(Expectation)-단계: 전방($\alpha$)/후방($\beta$) 확률 계산<br>
-통계 수집: $\xi_t(i,j)$ (시간 $t$에 상태 $i$, 시간 $t+1$에 상태 $j$에 있을 확률)<br>
-M(Maximization)-단계: 상태 전이 확률 업데이트<br>
+2. Baum-Welch 알고리즘 (EM 기반)
+
+사용 시점: 모델 학습 과정
+
+- Baum-Welch 알고리즘 (EM 알고리즘의 HMM 버전)
+- E(Expectation)-단계: 전방($\alpha$)/후방($\beta$) 확률 계산
+- 통계 수집: $\xi_t(i,j)$ (시간 $t$에 상태 $i$, 시간 $t+1$에 상태 $j$에 있을 확률)
+- M(Maximization)-단계: 상태 전이 확률 업데이트
 $$a_{ij} = \frac{\sum_{t=1}^{T-1} \xi_t(i,j)}{\sum_{t=1}^{T-1} \gamma_t(i)}$$
 
 여기서:<br>
 $\xi_t(i,j)$: 시간 $t$에 상태 $i$, 시간 $t+1$에 상태 $j$에 있을 확률<br>
 $\gamma_t(i)$: 시간 $t$에 상태 $i$에 있을 확률
 
-3. 강제 정렬(Forced Alignment) 기반:<br>
-사용 시점: 모델 세련화 및 정제 단계<br>
-음성-텍스트 쌍이 있는 학습 데이터 준비<br>
-현재 모델로 발화를 알려진 텍스트와 강제 정렬<br>
-상태 시퀀스를 카운트하여 전이 확률 계산(카운트를 정규화하여 확률 계산):<br>
+3. 강제 정렬(Forced Alignment) 기반
+
+사용 시점: 모델 세련화 및 정제 단계
+
+- 음성-텍스트 쌍이 있는 학습 데이터 준비
+- 현재 모델로 발화를 알려진 텍스트와 강제 정렬
+- 상태 시퀀스를 카운트하여 전이 확률 계산(카운트를 정규화하여 확률 계산):
 $$a_{ij} = \frac{카운트(상태 i에서 j로 전이)}{카운트(상태 i에서의 모든 전이)}$$
 
 ### 방출 확률 구하기
@@ -174,18 +168,20 @@ $\mathcal{N}(o_t; \mu, \Sigma)$: 평균 $\mu$, 공분산 $\Sigma$를 가진 다�
 #### 방출 확률 학습방법
 1. GMM 초기화
 
-사용 시점: 모델 학습 시작 전<br>
-방법:<br>
-각 상태에 할당된 특징 벡터의 k-means 클러스터링<br>
-초기 GMM 컴포넌트 생성 (평균, 공분산, 가중치)<br>
-Kaldi에서는 gmm-init-mono 등의 명령어로 구현<br>
+사용 시점: 모델 학습 시작 전
+
+방법:
+- 각 상태에 할당된 특징 벡터의 k-means 클러스터링
+- 초기 GMM 컴포넌트 생성 (평균, 공분산, 가중치)
+- Kaldi에서는 gmm-init-mono 등의 명령어로 구현
 
 2. Baum-Welch 알고리즘 내 GMM 업데이트
 
-사용 시점: 모델 학습 과정<br>
-방법:<br>
-E-단계에서 각 프레임의 상태 소속 확률 $\gamma_t(j)$ 계산<br>
-각 가우시안 컴포넌트에 대한 책임 확률($\gamma_t(j,m)$) 계산:<br>
+사용 시점: 모델 학습 과정
+
+방법:
+- E-단계에서 각 프레임의 상태 소속 확률 $\gamma_t(j)$ 계산
+- 각 가우시안 컴포넌트에 대한 책임 확률($\gamma_t(j,m)$) 계산:
 $$\gamma_t(j,m) = \gamma_t(j) \cdot \frac{c_{jm} \mathcal{N}(o_t; \mu_{jm}, \Sigma_{jm})}{\sum_{k=1}^M c_{jk} \mathcal{N}(o_t; \mu_{jk}, \Sigma_{jk})}$$
 GMM 파라미터 업데이트:<br>
 가중치: $c_{jm} = \frac{\sum_{t=1}^T \gamma_t(j,m)}{\sum_{t=1}^T \gamma_t(j)}$<br>
@@ -194,11 +190,12 @@ GMM 파라미터 업데이트:<br>
 
 3. 정렬 기반 GMM 세련화
 
-사용 시점: 모델 세련화 단계<br>
-방법:<br>
-강제 정렬로 특징 벡터를 HMM 상태에 할당<br>
-정렬된 데이터로 더 복잡한 GMM 학습 (예: 혼합 수 증가)<br>
-Kaldi에서는 gmm-acc-stats-ali와 gmm-est로 구현<br>
+사용 시점: 모델 세련화 단계
+
+방법:
+- 강제 정렬로 특징 벡터를 HMM 상태에 할당
+- 정렬된 데이터로 더 복잡한 GMM 학습 (예: 혼합 수 증가)
+- Kaldi에서는 gmm-acc-stats-ali와 gmm-est로 구현
 
 
 
@@ -241,14 +238,14 @@ $\frac{c_{jm} \mathcal{N}(o_t; \mu_{jm}, \Sigma_{jm})}{b_j(o_t)}$: 상태 $j$ �
 ### 기본 개념의 변화
 GMM-HMM 시스템에서 DNN-HMM 하이브리드 시스템으로의 전환은 ASR 발전에 있어 중요한 패러다임 변화였다. 주요 변화는 다음과 같다
 
-GMM-HMM에서<br>
-GMM은 생성 모델(generative model)로 $p(o_t|s_j)$, 즉 상태 $j$가 주어졌을 때 관측값 $o_t$의 우도(likelihood)를 직접 모델링<br>
-각 HMM 상태마다 별도의 GMM이 존재<br>
-방출 확률: $b_j(o_t) = p(o_t|s_j) = \sum_{m=1}^M c_{jm} \mathcal{N}(o_t; \mu_{jm}, \Sigma_{jm})$<br>
+GMM-HMM에서
+- GMM은 생성 모델(generative model)로 $p(o_t|s_j)$, 즉 상태 $j$가 주어졌을 때 관측값 $o_t$의 우도(likelihood)를 직접 모델링<br>
+- 각 HMM 상태마다 별도의 GMM이 존재<br>
+- 방출 확률: $b_j(o_t) = p(o_t|s_j) = \sum_{m=1}^M c_{jm} \mathcal{N}(o_t; \mu_{jm}, \Sigma_{jm})$<br>
 DNN-HMM에서:<br>
-DNN은 판별 모델(discriminative model)로 $p(s_j|o_t)$, 즉 관측값 $o_t$가 주어졌을 때 상태 $j$의 사후 확률(posterior)을 예측<br>
-하나의 DNN이 모든 상태의 사후 확률을 동시에 출력<br>
-베이즈 규칙으로 우도로 변환: $p(o_t|s_j) \propto \frac{p(s_j|o_t)}{p(s_j)}$<br>
+- DNN은 판별 모델(discriminative model)로 $p(s_j|o_t)$, 즉 관측값 $o_t$가 주어졌을 때 상태 $j$의 사후 확률(posterior)을 예측<br>
+- 하나의 DNN이 모든 상태의 사후 확률을 동시에 출력<br>
+- 베이즈 규칙으로 우도로 변환: $p(o_t|s_j) \propto \frac{p(s_j|o_t)}{p(s_j)}$<br>
 
 
 ### DNN이 GMM을 대체하는 메커니즘
@@ -268,15 +265,19 @@ DNN이 각 프레임에 대한 상태 사후 확률 $p(s_j|o_t)$ 출력<br>
 여기서 $p(s_j)$는 상태의 사전 확률로, 학습 데이터에서 각 상태의 출현 빈도를 계산하여 얻는다.
 
 ### 주요 혁신 포인트
-1. 특징 표현력<br>
+
+1. 특징 표현력
+
 GMM: 확률 분포를 명시적으로 모델링하지만 복잡한 패턴 인식에 제한적<br>
 DNN: 비선형 변환을 통해 더 복잡한 패턴 인식 가능, 더 강력한 특징 표현 학습<br>
 
-2. 문맥 정보 활용<br>
+2. 문맥 정보 활용
+
 GMM: 주로 현재 프레임의 특징만 사용<br>
 DNN: 여러 프레임을 입력으로 받아 더 긴 문맥 정보 활용 가능 (예: 9프레임 윈도우)<br>
 
-3. 파라미터 공유<br>
+3. 파라미터 공유
+
 GMM: 각 상태마다 별도의 파라미터 집합<br>
 DNN: 하나의 네트워크로 모든 상태의 확률 계산, 하위 층에서 특징 표현 공유<br>
 
