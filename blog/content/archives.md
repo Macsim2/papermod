@@ -42,6 +42,7 @@ disableShare: true # 底部不显示分享栏
 
 ## ASR
 * [Beam search](/posts/tech/ASR/beam_search)
+* [Viterbi](/posts/tech/ASR/viterbi)
 * Wav2vec 2.0
 * TLG HLG?
 
