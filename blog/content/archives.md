@@ -25,8 +25,7 @@ disableShare: true # 底部不显示分享栏
 * []
 
 ## Linear Algebra
-* [Eigenvalues & Eigenvectors](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
-* [SVD]
+* [Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
 * []
 
 ## Deep Learning
@@ -35,14 +34,14 @@ disableShare: true # 底部不显示分享栏
 * flash attention
 
 
-## Machine Learning 
+## Machine Learning
 * L1 & L2 Regularization
 * MLE & Bayesian Series (1/3) - Maximum Likelihood Estimation (MLE)
 * Principle Component Analysis (PCA) and AutoEncoder (AE)
 * Precision, Recall and F1 Score
 
 ## ASR
-* Beamsearch
+* [Beam search](/posts/tech/ASR/beam_search)
 * Wav2vec 2.0
 * TLG HLG?
 
@@ -53,8 +52,8 @@ disableShare: true # 底部不显示分享栏
 
 ## Quantum
 
-## strokes
+## Strokes
 
-## immune system
+## Immune system
 
 ## 
