@@ -31,14 +31,25 @@ disableShare: true # 底部不显示分享栏
 ## Deep Learning
 * linear regression
 * SGD
+* [Momentum](/posts/tech/deeplearning/momentum.md)
+* The importance of nonlinear activation
+* Backpropagation
+* BCE loss
+* MLE
+* Universal Approximation Theorem
+* 
+
 * flash attention
 
-
 ## Machine Learning
-* L1 & L2 Regularization
+* Linear Regression
 * MLE & Bayesian Series (1/3) - Maximum Likelihood Estimation (MLE)
-* Principle Component Analysis (PCA) and AutoEncoder (AE)
+* Principle Component Analysis (PCA)
+* AutoEncoder (AE)
 * Precision, Recall and F1 Score
+* L1 & L2 Regularization
+
+
 
 ## ASR
 * [Beam search](/posts/tech/ASR/beam_search)
@@ -50,6 +61,8 @@ disableShare: true # 底部不显示分享栏
 * BOJ
     * [LCS2](/posts/tech/algorithm/boj/LCS2)
     * [용액](/posts/tech/algorithm/boj/용액)
+
+## summarize papers
 
 ## Quantum
 

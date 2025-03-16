@@ -10,6 +10,7 @@ categories:
 tags: 
 - ASR
 - viterbi
+- HMM-GMM
 description: "about Viterbi"
 weight:
 slug: ""
@@ -281,16 +282,3 @@ DNN: 여러 프레임을 입력으로 받아 더 긴 문맥 정보 활용 가능
 GMM: 각 상태마다 별도의 파라미터 집합<br>
 DNN: 하나의 네트워크로 모든 상태의 확률 계산, 하위 층에서 특징 표현 공유<br>
 
-
-베이즈 정리를 적용하면:
-$P(s_j|o_t) = \frac{P(o_t|s_j) \cdot P(s_j)}{P(o_t)}$
-
-
-
-위 식을 $P(o_t|s_j)$에 대해 풀면:
-$P(o_t|s_j) = \frac{P(s_j|o_t) \cdot P(o_t)}{P(s_j)}$
-이것이 DNN 출력(사후 확률)에서 HMM에 필요한 우도로 변환하는 기본 수식이다.
-
-
-$P(o_t|s_j) \propto \frac{P(s_j|o_t)}{P(s_j)}$
-즉, 스케일링된 우도(scaled likelihood)를 사용한다.
