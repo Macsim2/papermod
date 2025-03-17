@@ -22,11 +22,11 @@ disableShare: true # 底部不显示分享栏
 * [Convolution]
 * [DFT and FFT]
 * [라플라스 변환 and Z-변환]
-* []
+
 
 ## Linear Algebra
 * [Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
-* []
+
 
 ## Deep Learning
 * linear regression
