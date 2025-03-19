@@ -26,20 +26,20 @@ disableShare: true # 底部不显示分享栏
 
 ## Linear Algebra
 * [Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
+* [aaa]
 
 
 ## Deep Learning
-* linear regression
-* SGD
-* [Momentum](/posts/tech/deeplearning/momentum.md)
-* The importance of nonlinear activation
-* Backpropagation
-* BCE loss
-* MLE
-* Universal Approximation Theorem
-* 
-
-* flash attention
+* [linear regression]
+* [SGD]
+* [\[Momentum\]](/posts/tech/deeplearning/momentum.md)
+* [The importance of nonlinear activation]
+* [Backpropagation](/posts/tech/deeplearning/backpropagation.md)
+* [BCE loss]
+* [MLE]
+* [Universal Approximation Theorem]
+* [flash attention]
+* [skip-connection]
 
 ## Machine Learning
 * Linear Regression
