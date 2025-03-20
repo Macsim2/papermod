@@ -16,7 +16,7 @@ disableShare: true # 底部不显示分享栏
 
 ## Signal Processing
 * [Sound](/posts/tech/signal/sound)
-* [FT](/posts/tech/signal/fouriertransform)
+* [Fourier Tansform](/posts/tech/signal/fouriertransform)
 * [Sampling Theorem]
 * [Filtering]
 * [Convolution]
@@ -25,16 +25,17 @@ disableShare: true # 底部不显示分享栏
 
 
 ## Linear Algebra
-* [Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
+* [\[WIP\]Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
 * [aaa]
 
 
 ## Deep Learning
 * [linear regression]
 * [SGD]
-* [\[Momentum\]](/posts/tech/deeplearning/momentum.md)
+* [\[WIP\]Momentum](/posts/tech/deeplearning/momentum/)
 * [The importance of nonlinear activation]
-* [Backpropagation](/posts/tech/deeplearning/backpropagation.md)
+* [\[WIP\]Backpropagation](/posts/tech/deeplearning/backpropagation/)
+* [\[WIP\]Cross Entropy](/posts/tech/deeplearning/cross_entropy/)
 * [BCE loss]
 * [MLE]
 * [Universal Approximation Theorem]
@@ -54,6 +55,8 @@ disableShare: true # 底部不显示分享栏
 ## ASR
 * [Beam search](/posts/tech/ASR/beam_search)
 * [Viterbi](/posts/tech/ASR/viterbi)
+* [CTC Loss](/posts/tech/ASR/ctc_loss)
+* [RNN-T Loss](/posts/tech/ASR/rnnt_loss)
 * Wav2vec 2.0
 * TLG HLG?
 
