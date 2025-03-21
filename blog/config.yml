@@ -15,7 +15,8 @@ buildExpired: false
 googleAnalytics:  # 谷歌统计
 # Copyright: Sulv
 
-paginate: 15    # 首页每页显示的文章数
+pagination:
+  pagerSize: 15    # 首页每页显示的文章数
 summaryLength: 140 # 文章概览的自字数，默认70
 
 minify:
@@ -201,7 +202,7 @@ privacy:
     disabled: false
     simple: true
 
-  twitter:
+  x: # Updated from twitter to x
     disabled: false
     enableDNT: true
     simple: true
@@ -217,6 +218,6 @@ privacy:
 services:
   instagram:
     disableInlineCSS: true
-  twitter:
+  x: # Updated from twitter to x
     disableInlineCSS: true
         
