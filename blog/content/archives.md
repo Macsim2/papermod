@@ -16,7 +16,7 @@ disableShare: true # 底部不显示分享栏
 
 ## Signal Processing
 * [Sound](/posts/tech/signal/sound)
-* [Fourier Tansform](/posts/tech/signal/fouriertransform)
+* [\[WIP\]Fourier Tansform](/posts/tech/signal/fouriertransform)
 * [Sampling Theorem]
 * [Filtering]
 * [Convolution]
@@ -26,7 +26,6 @@ disableShare: true # 底部不显示分享栏
 
 ## Linear Algebra
 * [\[WIP\]Eigenvalues & Eigenvectors & SVD](/posts/tech/linear_algebra/eigenvalues_eigenvectors)
-* [aaa]
 
 
 ## Deep Learning
@@ -47,7 +46,7 @@ disableShare: true # 底部不显示分享栏
 * MLE & Bayesian Series (1/3) - Maximum Likelihood Estimation (MLE)
 * Principle Component Analysis (PCA)
 * AutoEncoder (AE)
-* Precision, Recall and F1 Score
+* [\[WIP\]Precision, Recall and F1 Score](/posts/tech/machinelearning/classification_metric)
 * L1 & L2 Regularization
 
 
@@ -56,8 +55,8 @@ disableShare: true # 底部不显示分享栏
 * [Beam search](/posts/tech/ASR/beam_search)
 * [Viterbi](/posts/tech/ASR/viterbi)
 * [CTC Loss](/posts/tech/ASR/ctc_loss)
-* [RNN-T Loss](/posts/tech/ASR/rnnt_loss)
-* Wav2vec 2.0
+* [\[WIP\]RNN-T Loss](/posts/tech/ASR/rnnt_loss)
+* [\[WIP\]Wav2vec 2.0](/posts/tech/deeplearning/fine-tune_curious)
 * TLG HLG?
 
 ## Algorithms
