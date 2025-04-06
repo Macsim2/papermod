@@ -51,7 +51,7 @@ disableShare: true # 底部不显示分享栏
 
 ## Inference and Optimization
 * [\[WIP\]ONNX](/posts/tech/inference_optimzation/onnx_graph)
-* TensorRT
+* [\[WIP\]TensorRT](/posts/tech/inference_optimzation/tensorRT)
 
 
 ## ASR

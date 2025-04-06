@@ -14,7 +14,7 @@ tags: [
 ]
 categories: ["deeplearning"]
 ShowToc: true
-TocOpen: true
+TocOpen: true 
 hidemeta: false
 ---
 
