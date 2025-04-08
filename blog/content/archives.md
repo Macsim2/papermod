@@ -2,10 +2,10 @@
 title: "archives"
 date: 2021-11-06T14:57:28+08:00
 hidemeta: true
-description: ""
+description: "Archives of some posts"
 weight:
 slug: ""
-draft: true # 是否为草稿
+draft: false
 comments: false
 reward: false
 showToc: false # 显示目录
@@ -32,7 +32,6 @@ disableShare: true # 底部不显示分享栏
 * [linear regression]
 * [SGD]
 * [\[WIP\]Momentum](/posts/tech/deeplearning/momentum/)
-* [The importance of nonlinear activation]
 * [\[WIP\]Backpropagation](/posts/tech/deeplearning/backpropagation/)
 * [\[WIP\]Cross Entropy](/posts/tech/deeplearning/cross_entropy/)
 * [BCE loss]
@@ -40,6 +39,7 @@ disableShare: true # 底部不显示分享栏
 * [Universal Approximation Theorem]
 * [flash attention]
 * [skip-connection]
+* [Convoluition]
 
 ## Machine Learning
 * Linear Regression
@@ -51,25 +51,28 @@ disableShare: true # 底部不显示分享栏
 
 ## Inference and Optimization
 * [\[WIP\]ONNX](/posts/tech/inference_optimzation/onnx_graph)
-* [\[WIP\]TensorRT](/posts/tech/inference_optimzation/tensorRT)
+* [\[WIP\]TensorRT](/posts/tech/inference_optimzation/tensorrt)
+* [\[init\]Triton]()
 
 
 ## ASR
-* [Beam search](/posts/tech/ASR/beam_search)
-* [Viterbi](/posts/tech/ASR/viterbi)
-* [CTC Loss](/posts/tech/ASR/ctc_loss)
-* [\[WIP\]RNN-T Loss](/posts/tech/ASR/rnnt_loss)
+* [Beam search](/posts/tech/asr/beam_search)
+* [Viterbi](/posts/tech/asr/viterbi)
+* [CTC Loss](/posts/tech/asr/ctc_loss)
+* [\[WIP\]RNN-T Loss](/posts/tech/asr/rnnt_loss)
 * [\[WIP\]Wav2vec 2.0](/posts/tech/deeplearning/fine-tune_curious)
 * TLG HLG?
 
 ## Algorithms
 * BOJ
-    * [LCS2](/posts/tech/algorithm/boj/LCS2)
+    * [LCS2](/posts/tech/algorithm/boj/lcs2)
     * [용액](/posts/tech/algorithm/boj/용액)
 
 ## summarize papers
+* [\[init\]Mamba]()
 
 ## Quantum
+* 
 
 ## Strokes
 
