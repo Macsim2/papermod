@@ -3,7 +3,7 @@ title: "CTC Loss와 RNN-T Loss의 내부 구조와 동작 원리"
 date: 2024-08-10T10:30:00+09:00
 lastmod: 2024-08-10T10:30:00+09:00
 draft: false
-description: "자동 음성 인식에서 핵심적인 CTC Loss와 RNN-T Loss의 내부 메커니즘, 수학적 유도, 최적화 기법 및 실전 적용 경험에 대한 심도 있는 기술적 분석"
+description: "ASR에서 핵심적인 CTC Loss와 RNN-T Loss의 내부 메커니즘, 수학적 유도, 최적화 기법 및 실전 적용 경험에 대한 심도 있는 기술적 분석"
 tags: [
 	"deeplearning",
 	"ASR",
@@ -50,7 +50,7 @@ CTC(Connectionist Temporal Classification)는 가능한 모든 정렬 경로의 
 입력 시퀀스 $\mathbf{X} \in \mathbb{R}^{T \times D}$와 타겟 시퀀스 $\mathbf{Y} \in \mathcal{V}^U$에 대해, CTC는 다음과 같이 $P(\mathbf{Y}|\mathbf{X})$를 정의한다:
    <div>
    $$
-   예측 네트워크(Prediction N(\mathbf{Y})} P(\pi|\mathbf{X})
+   P(\mathbf{Y}|\mathbf{X}) = \sum_{\pi \in \mathcal{B}^{-1}(\mathbf{Y})} P(\pi|\mathbf{X})
    $$
    </div>
 
@@ -62,13 +62,13 @@ CTC(Connectionist Temporal Classification)는 가능한 모든 정렬 경로의 
 
 $\mathcal{B}$는 두 가지 규칙을 적용한다:
 1. 모든 blank 토큰('-')을 제거
-2. 연속된 중복 토큰을 하나로 병합 (예: "A-A-" → "A")
+2. 연속된 중복 토큰을 하나로 병합 (예: "AA-" → "A")
 
 각 경로 $\pi$의 확률은 조건부 독립 가정하에 다음과 같이 계산된다:
 
 $$P(\pi|\mathbf{X}) = \prod_{t=1}^{T} P(\pi_t|\mathbf{X}, t)$$
 
-여기서 $P(\pi_t|\mathbf{X}, t)$는 시간 $t$에서 모델이 출력하는 토큰 $\pi_t$의 확률이다. 실제 구현에서는 이 확률은 Neural Network의 출력에 softmax를 적용하여 얻는다:
+실제 구현에서는 이 확률은 Neural Network의 출력에 softmax를 적용하여 얻는다:
 
 $$P(\pi_t = k|\mathbf{X}, t) = \frac{\exp(z_{t,k})}{\sum_{k'} \exp(z_{t,k'})}$$
 
@@ -88,11 +88,100 @@ CTC Loss를 계산하기 위해서는 모든 가능한 정렬 경로 $\pi \in \m
 
 #### Forward 알고리즘
 
-Forward 변수 $\alpha(t,s)$는 시간 $t$까지 확장된 라벨 $\mathbf{l}$의 첫 $s$ 요소에 대응하는 모든 경로의 확률 합을 나타낸다:
+Forward 변수 $\alpha(t,s)$는 시간 $t$까지 확장된 라벨 $\mathbf{l}$의 첫 $s$ 요소에 대응하는 모든 경로의 확률 합을 나타낸다. 
 
-$$\alpha(t,s) = \sum_{\pi_{1,2,\ldots,t}: \mathcal{B}(\pi_{1,2,\ldots,t}) = \mathbf{l}_{1,2,\ldots,s}} \prod_{i=1}^{t} P(\pi_i|\mathbf{X}, i)$$
+<div>
+$$
+\alpha(t,s) = \sum_{\pi_{1,2,\ldots,t}: \mathcal{B}(\pi_{1,2,\ldots,t}) = \mathbf{l}_{1,2,\ldots,s}} \prod_{i=1}^{t} P(\pi_i|\mathbf{X}, i)
+$$
+</div>
 
-다음과 같이 재귀적으로 계산할 수 있다:
+수식으로 만 보니 무시무시 하다는 생각이 든다. 그래서 조금 예를 더해서 설명을 해보자.
+
+##### 직관적 이해를 위한 CTC Forward-Backward 알고리즘
+
+CTC의 Forward-Backward 알고리즘을 예시와 함께 이해해보자. 정확한 정렬을 모르는 상태에서 "CAT"이라는 단어를 인식하는 상황을 생각해보자.
+
+![CTC Forward-Backward 알고리즘](/images/ctc_forward_backward.png) <!-- 검색 키워드: CTC 알고리즘 격자 표현, CTC lattice visualization -->
+
+**예시: "CAT" 인식하기**
+
+1. 확장된 라벨 시퀀스: "C-A-T-" (여기서 '-'는 blank 토큰)
+2. 시간 프레임: $T=5$ (5개의 오디오 프레임이 있다고 가정)
+
+**각 시간 단계에서의 소프트맥스 출력값**:
+모델이 각 시간 프레임에서 각 토큰에 대해 출력한 확률값(소프트맥스 출력)을 먼저 살펴보자:
+
+```
+      |   C   | blank |   A   |   T   | 기타  | 합계  |
+------+-------+-------+-------+-------+-------+-------+
+t=1   |  0.3  |  0.7  |  0.0  |  0.0  |  0.0  |  1.0  |
+t=2   |  0.1  |  0.3  |  0.6  |  0.0  |  0.0  |  1.0  |
+t=3   |  0.1  |  0.5  |  0.3  |  0.1  |  0.0  |  1.0  |
+t=4   |  0.0  |  0.4  |  0.1  |  0.5  |  0.0  |  1.0  |
+t=5   |  0.0  |  0.2  |  0.0  |  0.4  |  0.4  |  1.0  |
+```
+이 표는 각 시간 스텝에서 신경망이 예측한 각 토큰의 확률이다. 각 행의 합은 항상 1이다(확률 분포).
+
+**격자 표현**:
+아래 표는 Forward 알고리즘이 어떻게 작동하는지를 보여준다. 각 셀 $\alpha(t,s)$는 시간 $t$에서 확장된 라벨의 $s$번째 요소까지의 모든 경로의 확률 합이다.
+
+```
+      | s=1(C) | s=2(-) | s=3(A) | s=4(-) | s=5(T) | s=6(-) | 합계   |
+------+--------+--------+--------+--------+--------+--------+--------+
+t=1   | 0.3    | 0.7    | 0.0    | 0.0    | 0.0    | 0.0    | 1.0    |
+t=2   | 0.03   | 0.3    | 0.6    | 0.0    | 0.0    | 0.0    | 0.93   |
+t=3   | 0.003  | 0.165  | 0.279  | 0.3    | 0.06   | 0.0    | 0.807  |
+t=4   | 0.0    | 0.0672 | 0.0447 | 0.2316 | 0.3195 | 0.024  | 0.687  |
+t=5   | 0.0    | 0.0134 | 0.0    | 0.0553 | 0.2383 | 0.0687 | 0.3757 |
+```
+
+**중요**: Forward 알고리즘에서 각 시간 단계의 모든 $\alpha(t,s)$ 값의 합은 반드시 1이 아니다. 이는 $\alpha(t,s)$가 확률 분포가 아니라 "해당 지점까지 가능한 모든 경로의 확률 합"이기 때문이다. 일부 경로는 포함되지 않을 수 있으며, 전체 확률이 시간이 지남에 따라 감소할 수도 있다. 최종 확률은 $\alpha(T, 2U+1)$과 $\alpha(T, 2U)$의 합으로 계산된다.
+
+**단계별 Forward 계산 예시**:
+
+1. **초기화**: 첫 번째 시간 프레임($t=1$)에서는 "C"와 "-"만 가능
+   - $\alpha(1,1) = P(C|\mathbf{X}, 1) = 0.3$
+   - $\alpha(1,2) = P(-|\mathbf{X}, 1) = 0.7$
+   - $\alpha(1,s) = 0$ for $s > 2$
+
+2. **시간 $t=2$에서의 계산**:
+   - "C" ($s=1$)로 가려면: 이전 "C"에서 머물러야 함 (경로: C -> C)
+     $\alpha(2,1) = \alpha(1,1) \cdot P(C|\mathbf{X}, 2) = 0.3 \cdot 0.1 = 0.03$
+   
+   - "-" ($s=2$)로 가려면: 이전 "C"에서 오거나(경로: C -> -), 이전 blank에서 머물러야 함 (경로: - -> -)
+     $\alpha(2,2) = [\alpha(1,1) + \alpha(1,2)] \cdot P(-|\mathbf{X}, 2) = [0.3 + 0.7] \cdot 0.3 = 1.0 \cdot 0.3 = 0.3$
+   
+   - "A" ($s=3$)로 가려면: 이전 "C"에서 오거나(경로: C -> A), 이전 blank에서 와야 함 (경로: - -> A). ($l_3 \neq l_1$ 이므로 $\alpha(1,1)$과 $\alpha(1,2)$ 모두 고려)
+     $\alpha(2,3) = [\alpha(1,1) + \alpha(1,2)] \cdot P(A|\mathbf{X}, 2) = [0.3 + 0.7] \cdot 0.6 = 1.0 \cdot 0.6 = 0.6$
+
+이런 방식으로 전체 격자를 채워나가면, 최종적으로 마지막 셀들의 합 $\alpha(T, 2U) + \alpha(T, 2U+1)$이 "CAT"을 인식할 확률이 된다. 예시에서는 $\alpha(5, 5) + \alpha(5, 6) = 0.2383 + 0.0687 = 0.307$이 된다.
+
+**시각화**: Forward 알고리즘에서 $\alpha(t,s)$를 계산할 때 고려하는 이전 셀들의 관계를 보여준다.
+
+```
+                  ┌───────────────┐
+                  │ α(t-1, s-2)   │
+                  │ (Skip 경로)   │
+                  └───────┬───────┘
+                         ▼
+┌───────────────┐  ┌───────────────┐
+│ α(t-1, s-1)   │◄─┤ α(t, s)       │
+│ (대각선 경로) │  │ (현재 계산)   │
+└───────┬───────┘  └───────────────┘
+        │                  ▲
+        │         ┌───────┴───────┐
+        │         │ α(t-1, s)     │
+        └────────►│ (수평 경로)   │
+                  └───────────────┘
+```
+
+이 관계를 통해 세 가지 가능한 경로를 고려한다:
+1. **수평 경로**: 같은 라벨에 머무르는 경우
+2. **대각선 경로**: 이전 라벨에서 현재 라벨로 이동하는 경우
+3. **Skip 경로**: 두 단계 이전 라벨에서 바로 현재 라벨로 이동하는 경우 (특정 조건에서만)
+
+일반적으로는 아래와 같은 식을 적용할 수 있다.
 
 **초기화:**
 - $\alpha(1,1) = P(l_1|\mathbf{X}, 1)$
@@ -109,16 +198,85 @@ $$\alpha(t,s) = \sum_{\pi_{1,2,\ldots,t}: \mathcal{B}(\pi_{1,2,\ldots,t}) = \mat
 - $l_s = blank$ 인 경우:
   $$\alpha(t,s) = \left[ \alpha(t-1,s) + \alpha(t-1,s-1) \right] \cdot P(blank|\mathbf{X}, t)$$
 
+최종적으로, 타겟 시퀀스의 확률은 다음과 같이 계산된다:
+$$P(\mathbf{Y}|\mathbf{X}) = \alpha(T, 2U) + \alpha(T, 2U+1)$$
+
+**요약: Forward-Backward 알고리즘의 핵심**
+
+1. **격자 구조**: 시간(t)과 라벨 인덱스(s)로 구성된 2차원 배열
+2. **확률 전파**: Forward는 시작점에서 끝으로, Backward는 끝에서 시작점으로
+3. **세 가지 경로**: 수평(같은 라벨 유지), 대각선(다음 라벨로), Skip(특정 조건에서)
+4. **확률 조합**: 가능한 모든 경로의 확률을 합하여 최종 인식 확률 계산
+
+이 알고리즘을 통해 가능한 모든 정렬을 명시적으로 고려하지 않고도 효율적으로 라벨링 확률을 계산할 수 있습니다.
+
 #### Backward 알고리즘
 
-Backward 변수 $\beta(t,s)$는 시간 $t$부터 $T$까지, 확장된 라벨 $\mathbf{l}$의 $s$번째 요소부터 끝까지 대응하는 모든 경로의 확률 합을 나타낸다:
+Backward 변수 $\beta(t,s)$는 시간 $t$부터 $T$까지, 확장된 라벨 $\mathbf{l}$의 $s$번째 요소부터 끝까지 대응하는 모든 경로의 확률 합을 나타낸다.
 
+**Backward 알고리즘 직관적 이해**
 
-다음과 같이 재귀적으로 계산할 수 있다:
+Backward 알고리즘은 Forward와 반대 방향으로 작동하며, 미래 시점에서 현재 시점으로 확률을 전파한다.
+
+![CTC Backward 알고리즘](/images/ctc_backward.png) <!-- 검색 키워드: CTC backward algorithm, CTC 역방향 계산 -->
+
+**"CAT" 예시의 Backward 계산**: Backward 변수 $\beta(t,s)$ 계산 예시
+
+```
+      | s=1(C) | s=2(-) | s=3(A) | s=4(-) | s=5(T) | s=6(-) |
+------+--------+--------+--------+--------+--------+--------+
+t=5   | 0.0    | 0.0    | 0.0    | 0.0    | 0.4    | 1.0    |
+t=4   | 0.0    | 0.0    | 0.03   | 0.12   | 0.26   | 0.2    |
+t=3   | 0.0015 | 0.018  | 0.071  | 0.11   | 0.052  | 0.0    |
+t=2   | 0.0128 | 0.036  | 0.033  | 0.0    | 0.0    | 0.0    |
+t=1   | 0.0307 | 0.0198 | 0.0    | 0.0    | 0.0    | 0.0    |
+```
+(참고: Backward 계산은 수치 안정성을 위해 로그 스케일에서 수행되는 경우가 많으나, 여기서는 이해를 돕기 위해 직접 확률로 계산)
+
+1. **초기화**: 마지막 시간 프레임($t=T=5$)에서 시작
+   - $\beta(5, 6) = 1.0$ (확장 라벨의 마지막 blank 이후는 항상 성공적인 경로로 간주)
+   - $\beta(5, 5) = P(T|\mathbf{X}, 5) = 0.4$ (마지막 라벨 위치에서 해당 라벨의 확률)
+   - $\beta(5, s) = 0$ for $s < 5$ (이전 위치에서는 아직 경로 확률 계산 안 함)
+
+2. **시간 $t=4$에서의 계산**:
+   - "T" ($s=5$): 다음 시간($t=5$)의 'T'에 머무르거나(경로: T->T), blank로 이동(경로: T->-)
+     $\beta(4,5) = \beta(5,5) \cdot P(T|\mathbf{X}, 5) + \beta(5,6) \cdot P(-|\mathbf{X}, 5)$
+     $\beta(4,5) = 0.4 \cdot 0.4 + 1.0 \cdot 0.2 = 0.16 + 0.2 = 0.36$
+   
+   - "-" ($s=4$): 다음 시간($t=5$)의 '-'에 머무르거나(경로: ->-), 'T'로 이동(경로: ->T)
+     $\beta(4,4) = \beta(5,4) \cdot P(-|\mathbf{X}, 5) + \beta(5,5) \cdot P(T|\mathbf{X}, 5)$
+     $\beta(4,4) = 0.0 \cdot 0.2 + 0.4 \cdot 0.4 = 0.16$
+   
+   - "A" ($s=3$): 다음 시간의 'A'에 머무르거나, '-'로 이동하거나, 'T'로 건너뛸 수 있음
+     $\beta(4,3) = \beta(5,3) \cdot P(A|\mathbf{X}, 5) + \beta(5,4) \cdot P(-|\mathbf{X}, 5) + \beta(5,5) \cdot P(T|\mathbf{X}, 5)$
+     (단, $\beta(5,3)=0$으로 초기화했으므로 첫 항은 0)
+
+이런 방식으로 $t=1$까지 거슬러 올라가면, Forward 알고리즘과 일관된 최종 확률을 얻을 수 있다. 이론적으로는 $\beta(1,1) \cdot P(C|\mathbf{X}, 1) + \beta(1,2) \cdot P(-|\mathbf{X}, 1) = \alpha(T, 2U) + \alpha(T, 2U+1)$가 성립해야 한다.
+
+**시각화**: Backward 알고리즘에서의 경로 관계:
+
+```
+┌───────────────┐  ┌───────────────┐
+│ β(t+1, s)     │◄─┤ β(t, s)       │
+│ (수평 경로)   │  │ (현재 계산)   │
+└───────┬───────┘  └───────────────┘
+        │                  ▲
+        │         ┌───────┴───────┐
+        │         │ β(t+1, s+1)   │
+        └────────►│ (대각선 경로) │
+                  └───────────────┘
+                         ▲
+                  ┌───────────────┐
+                  │ β(t+1, s+2)   │
+                  │ (Skip 경로)   │
+                  └───────────────┘
+```
+
+일반적으로는 다음과 같은 재귀식을 적용할 수 있다.
 
 **초기화:**
 - $\beta(T,2U+1) = 1$
-- $\beta(T,2U) = P(blank|\mathbf{X}, T)$
+- $\beta(T,2U) = 1$
 - $\beta(T,s) = 0$ for $s < 2U$
 
 **재귀식:**
@@ -132,7 +290,10 @@ Backward 변수 $\beta(t,s)$는 시간 $t$부터 $T$까지, 확장된 라벨 $\m
   $$\beta(t,s) = \beta(t+1,s) \cdot P(blank|\mathbf{X}, t+1) + \beta(t+1,s+1) \cdot P(l_{s+1}|\mathbf{X}, t+1)$$
 
 최종적으로, 타겟 시퀀스의 확률은 다음과 같이 계산된다:
-$$P(\mathbf{Y}|\mathbf{X}) = \alpha(T, 2U+1) = \beta(1, 1)$$
+$$P(\mathbf{Y}|\mathbf{X}) = \alpha(T, 2U) + \alpha(T, 2U+1) = \beta(0, 0)$$ (구현에 따라 $\beta(1,1)+\beta(1,2)$와 유사)
+
+또는 Backward 알고리즘 관점에서:
+$$P(\mathbf{Y}|\mathbf{X}) = \sum_{s=1}^{2} \beta(1, s) \cdot P(l_s|\mathbf{X}, 1)$$
 
 ### 3. 미분과 기울기 계산의 정밀 유도
 
@@ -150,12 +311,12 @@ $P(\mathbf{Y}|\mathbf{X})$의 $z_{t,k}$에 대한 편미분은 다음과 같이 
 $$\frac{\partial P(\mathbf{Y}|\mathbf{X})}{\partial z_{t,k}} = \frac{\partial}{\partial z_{t,k}} \sum_{\pi \in \mathcal{B}^{-1}(\mathbf{Y})} \prod_{i=1}^{T} P(\pi_i|\mathbf{X}, i)$$
 
 소프트맥스 함수의 미분 성질을 이용하면:
-
+<div>
 $$\frac{\partial P(j|\mathbf{X}, t)}{\partial z_{t,k}} =
 \begin{cases}
 P(j|\mathbf{X}, t) \cdot (1 - P(k|\mathbf{X}, t)) & \text{if } j = k \\
--P(j|\mathbf{X}, t) \cdot P(k|\mathbf{X}, t) & \text{if } j \neq k
-\end{cases}$$
+-P(j|\mathbf{X}, t) \cdot P(k|\mathbf{X}, t) & \text{if } j \neq k\end{cases}$$
+</div>
 
 이를 이용하여, 다음과 같이 기울기를 표현할 수 있다:
 <div>
@@ -178,7 +339,7 @@ $$\log(a + b) = \log(a) + \log(1 + \exp(\log(b) - \log(a)))$$
 
 더 일반적으로, $\log \sum_i \exp(x_i)$를 계산할 때는 다음 기법을 사용한다:
 
-$$\log \sum_i \exp(x_i) = m + \log \sum_i \exp(x_i - m) \quad \text{where } m = \max_i x_i$$
+$$\log \sum_i \exp(x_i) = m + \log \sum_i \exp(x_i - m)$$
 
 이를 통해 언더플로우와 오버플로우 문제를 모두 완화할 수 있다.
 
@@ -315,6 +476,7 @@ $$
 $$
 </div>
 
+
 연쇄 법칙(chain rule)을 적용하면:
 <div>
 $$
@@ -361,13 +523,11 @@ $$
 
 Blank 토큰은 CTC 학습에서 핵심적인 역할을 한다. 그 역할과 영향을 더 심층적으로 분석해보자.
 
-##### Blank 토큰의 확률적 역학
+Blank 토큰('−')은 세 가지 중요한 기능을 수행한다:
 
-Blank 토큰이 높은 확률을 갖는 몇 가지 상황이 있다:
-
-1. **반복 토큰 사이**: 동일한 토큰이 연속적으로 등장해야 할 때 (예: "HELLO"에서 "L" 토큰 반복)
-2. **연음 구간(transition regions)**: 한 발음에서 다른 발음으로 전환되는 중간 지점
-3. **무음 구간(silence regions)**: 발화 사이의 조용한 부분
+1. **반복 문자 처리**: "HELLO"와 같이 같은 문자가 연속으로 나타나는 경우를 처리할 수 있게 함 (예: "HE−LLO"는 "HELLO"로 축약)
+2. **시간적 확장**: 짧은 라벨 시퀀스를 긴 입력 시퀀스에 맞게 확장 (예: "CAT"를 "C−A−T−"로 확장)
+3. **무음 구간 표현**: 실제 발음 사이의 침묵이나 배경 소음을 명시적으로 모델링
 
 학습 초기에는 모델이 정확한 정렬을 아직 학습하지 못했기 때문에, blank 토큰에 높은 확률을 할당하는 것이 "안전한 전략"이 된다. 이는 "blank 함정(blank trap)" 현상을 초래할 수 있다.
 
@@ -476,7 +636,7 @@ CTC 학습의 초기 단계에서는 그레디언트가 불안정하고 크기�
 이러한 접근법의 이론적 근거는 다음과 같다:
 - 초기 낮은 학습률: 무작위 초기화된 모델의 불안정한 그레디언트로 인한 발산 방지
 - 점진적 증가: 모델이 더 안정적인 그레디언트를 생성하게 되면서 학습 속도 향상
-- 후기 감소: 미세 조정 단계에서 국소 최적점 주변에서의 진동 감소
+- 후기 감소: 미세 조정 단계에서의 진동 감소
 
 실증적 연구에 따르면, 이러한 스케줄링 전략은 CTC 모델의 최종 성능을 1-2% 개선할 수 있다.
 
@@ -486,7 +646,7 @@ CTC 학습의 초기 단계에서는 그레디언트가 불안정하고 크기�
 
 RNN-T(Recurrent Neural Network Transducer)는 CTC의 조건부 독립 가정을 극복하기 위해 개발된 방법이다. RNN-T는 이전 출력 토큰들의 정보를 활용하여 다음과 같이 확률 모델을 정의한다:
 
-$$P(\mathbf{Y}|\mathbf{X}) = \sum_{\pi \in \mathcal{A}(\mathbf{Y})} P(\pi|\mathbf{X})$$
+$$P(\mathbf{Y}|\mathbf{X}) = \sum_{\pi \in \mathcal{B}^{-1}(\mathbf{Y})} P(\pi|\mathbf{X})$$
 
 $$P(\pi|\mathbf{X}) = \prod_{i=1}^{\|\pi\|} P(\pi_i|\mathbf{X}, \mathbf{y}_{<u(i)})$$
 
@@ -581,7 +741,7 @@ CTC와 RNN-T는 음성 인식에서 정렬 문제에 대한 수학적으로 우�
 * [3] He, Y., et al. "Streaming End-to-end Speech Recognition For Mobile Devices." ICASSP 2019. [https://arxiv.org/abs/1811.06621](https://arxiv.org/abs/1811.06621)
 * [4] Hannun, A. "Sequence Modeling with CTC." Distill, 2017. [https://distill.pub/2017/ctc/](https://distill.pub/2017/ctc/)
 * [5] Battenberg, E., et al. "Exploring Neural Transducers for End-to-End Speech Recognition." ASRU 2017. [https://arxiv.org/abs/1707.07413](https://arxiv.org/abs/1707.07413)
-* [6] Seunghyun, SEO. "CTC Beam Search Decoding." [https://seunghyunseo.github.io/speech/2021/10/20/ctc_beam_search/](https://seunghyunseo.github.io/speech/2021/10/20/ctc_beam_search/)
+
 
 <!-- 이미지 참고 사항 -->
 <!-- 1. "CTC 확률 그래프" - CTC 경로와 라벨 매핑의 확률적 관계를 보여주는 다이어그램, ICML 2006 논문 참고 -->

@@ -58,8 +58,7 @@ disableShare: true # 底部不显示分享栏
 ## ASR
 * [Beam search](/posts/tech/asr/beam_search)
 * [Viterbi](/posts/tech/asr/viterbi)
-* [CTC Loss](/posts/tech/asr/ctc_loss)
-* [\[WIP\]RNN-T Loss](/posts/tech/asr/rnnt_loss)
+* [CTC, RNN-T Loss](/posts/tech/asr/ctc_loss)
 * [\[WIP\]Wav2vec 2.0](/posts/tech/deeplearning/fine-tune_curious)
 * [\[WIP\]TLG HCLG](/posts/tech/asr/tlg_hclg)
 
