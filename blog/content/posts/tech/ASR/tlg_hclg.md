@@ -19,17 +19,19 @@ TocOpen: true
 hidemeta: false
 ---
 
-음성 인식(ASR) 시스템을 개발하다 보면 언젠가는 반드시 마주치게 되는 벽이 있다. 바로 **"이 복잡한 WFST 기반 디코딩 그래프는 도대체 어떻게 작동하는 걸까?"** 라는 의문이다. 특히 Kaldi의 HCLG 그래프나 WeNet의 TLG 디코딩 방식은 논문만 읽어서는 완전히 이해하기 어렵고, 코드를 직접 분석해야만 그 비밀이 드러나는 경우가 많다.
+오래전부터 ASR 시스템을 개발한 사람이라면, kaldi라는 toolkit을 한번쯤 들어봤을 것이다. 대 NLP or Vision or multimodal 시대에서도 꿋꿋히 ASR을 정진해 나가는 dinal povey 교수님이시다..! 그가 2011년에 쓴 논문의 open source가 바로 kaldi toolkit 인데, 그 toolkit은 WFST(Weighted Finite State Transducer)이란 기법을 사용하고 뭐 겉으로 보기에도 그리 쉽게 이해되지 않는다. 
 
-이 글에서는 단순히 "WFST가 무엇인가"에 대한 기본 설명을 넘어, Kaldi와 WeNet에서 구현된 WFST 기반 디코딩 방식의 내부 구조와 작동 원리를 실제 예시와 함께 파헤쳐보려 한다. <!--more-->
+오늘은 **"이 복잡한 WFST 기반 디코딩 그래프는 도대체 어떻게 작동하는 걸까?"** 라는 궁금증을 가지고 이번 포스팅을 해보려고 한다. 특히 Kaldi의 HCLG 그래프나 WeNet의 TLG 디코딩 방식은 논문만 읽어서는 완전히 이해하기 어렵고, 코드를 직접 분석해야만 그 비밀이 드러나는 경우가 많은 것 같다.
+
+이 글에서는 단순히 "WFST가 무엇인가"에 대한 기본 설명을 넘어, Kaldi와 WeNet에서 구현된 WFST 기반 디코딩 방식의 내부 구조와 작동 원리를 실제 예시와 함께 알아보고자 한다. <!--more-->
 
 ## WFST: 오토마타 이론에서 음성 인식까지
 
 ### 오토마타 이론과 WFST의 이론적 기반
 
-WFST를 이해하기 위해서는 컴퓨터 과학의 근간이 되는 **오토마타 이론(Automata Theory)**부터 시작해야 한다. 오토마타 이론은 추상적 기계와 계산 모델을 연구하는 이론으로, 1950년대 Noam Chomsky의 형식 언어 계층(Chomsky Hierarchy)과 함께 발전했다.
+WFST를 이해하기 위해서는 컴퓨터 과학의 근간이 되는 **오토마타 이론(Automata Theory)** 부터 시작해야 한다. 오토마타 이론은 추상적 기계와 계산 모델을 연구하는 이론으로, 1950년대 Noam Chomsky의 형식 언어 계층(Chomsky Hierarchy)과 함께 발전했다.
 
-이 계층 구조에서 정규 언어(Regular Language)를 인식할 수 있는 가장 기본적인 모델이 **유한 상태 오토마타(Finite State Automata, FSA)**이다. 유한 상태 오토마타는 다음과 같은 5개의 구성 요소를 가진다
+이 계층 구조에서 정규 언어(Regular Language)를 인식할 수 있는 가장 기본적인 모델이 **유한 상태 오토마타(Finite State Automata, FSA)** 이다. 유한 상태 오토마타는 다음과 같은 5개의 구성 요소를 가진다
 
 $$A = (Q, \Sigma, \delta, q_0, F)$$
 
@@ -66,15 +68,15 @@ $$W = (Q, \Sigma, \Delta, \delta, \lambda, \rho, K)$$
 
 WFST(Weighted Finite State Transducer)는 한마디로 **입력 시퀀스를 출력 시퀀스로 변환하는 가중치 있는 유한 상태 기계**이다. 복잡하게 들리지만, 본질적으로는 노드(상태)와 간선(전이)으로 구성된 방향성 그래프(Directed Graph)이다.
 
-기본 구성 요소를 살펴보면:
+기본 구성 요소를 다시 살펴보면:
 
 - **상태(State)**: 그래프의 노드로, 특정 시점의 상태를 나타냄
-- **전이(Transition)**: 하나의 상태에서 다른 상태로 이동하는 간선
+- **전이(Transition)**: 하나의 상태에서 다른 상태로 이동하는 간선(Edge)
 - **입력 심볼(Input Symbol)**: 전이가 발생하기 위해 필요한 입력
 - **출력 심볼(Output Symbol)**: 전이가 발생할 때 생성되는 출력
 - **가중치(Weight)**: 각 전이에 할당된 비용 또는 확률
 
-형식적으로 WFST는 다음과 같이 표현할 수 있다:
+형식적으로 WFST는 다음과 같이 표현할 수 있다.
 $T = (Σ, Δ, Q, I, F, E, λ, ρ)$
 
 여기서:
@@ -106,14 +108,14 @@ $T = (Σ, Δ, Q, I, F, E, λ, ρ)$
 
 ### WFST의 음성 인식 적용 원리
 
-음성 인식에서 WFST는 음향 모델(Acoustic Model)의 출력을 단어 시퀀스로 변환하는 복잡한 과정을 효율적으로 처리하는 데 사용된다. 이 과정에서 다음과 같은 변환 단계가 필요하다:
+이제 ASR에서의 WFST를 알아보자. WFST는 `음향 모델(Acoustic Model)의 출력`을 `단어 시퀀스`로 변환하는 복잡한 과정을 효율적으로 처리하는 데 사용된다. 이 과정에서 다음과 같은 변환 단계가 필요하다:
 
 1. **음향적 특징 → 음소**: 음향 모델이 인식한 음소 확률
 2. **음소 → 발음 변이**: 같은 음소 시퀀스가 다르게 발음될 수 있음
 3. **발음 → 단어**: 발음 사전에 따른 단어 매핑
 4. **단어 → 문장**: 언어 모델에 따른 문장 구성
 
-이 모든 단계를 별도로 처리하면 계산 비용이 매우 높아진다. WFST는 이러한 변환 단계를 미리 **합성(Composition)**하여 단일 그래프로 표현함으로써 효율적인 디코딩을 가능하게 한다.
+이 모든 단계를 별도로 처리하면 계산 비용이 매우 높아진다. WFST는 이러한 변환 단계를 미리 **합성(Composition)** 하여 단일 그래프로 표현함으로써 효율적인 디코딩을 가능하게 한다.
 
 ```
 [음향 모델 출력] → [WFST 기반 디코딩 그래프] → [단어 시퀀스]
@@ -138,9 +140,9 @@ WFST의 강력함은 다양한 지식 원천(음향 모델, 발음 사전, 언�
 
 ### WFST의 핵심 연산
 
-WFST 프레임워크의 강력함은 다양한 연산을 통해 트랜스듀서를 조작하고 최적화할 수 있다는 점에 있다. 주요 연산으로는:
+WFST 프레임워크의 강력함은 다양한 연산을 통해 transducer를 조작하고 최적화할 수 있다는 점에 있다. 주요 연산으로는 아래와 같다.
 
-- **합성(Composition) ∘**: 두 트랜스듀서를 연결하여 하나의 새로운 트랜스듀서 생성
+- **합성(Composition) ∘**: 두 transducer를 연결하여 하나의 새로운 transducer 생성
   - $A ∘ B = \{(x, z, w_1 ⊗ w_2) | \exists y : (x, y, w_1) \in A \text{ and } (y, z, w_2) \in B\}$
 
 - **결정화(Determinization)**: 각 상태에서 동일한 입력에 대해 정확히 하나의 전이만 갖도록 변환
@@ -155,7 +157,7 @@ WFST 프레임워크의 강력함은 다양한 연산을 통해 트랜스듀서�
 
 ## Kaldi의 HCLG: 상세 분석
 
-Kaldi는 현재까지도 많은 ASR 시스템의 기반이 되는 오픈 소스 툴킷으로, WFST 기반 디코딩의 표준을 확립했다고 볼 수 있다. Kaldi의 디코딩 그래프는 `HCLG.fst`라는 이름으로 불리는데, 이는 그래프를 구성하는 네 가지 주요 트랜스듀서의 합성을 의미한다:
+이제 WFST라는 것의 정체를 조금 알게 되었으니 어떻게 Kaldi에 적용되었는지 알아보자. Kaldi는 현재까지도 많은 ASR 시스템의 기반이 되는 오픈 소스 툴킷으로, WFST 기반 디코딩의 표준을 확립했다고 볼 수 있다. Kaldi의 디코딩 그래프는 `HCLG.fst`라는 이름으로 불리는데, 이는 그래프를 구성하는 네 가지 주요 transducer의 합성을 의미한다.
 
 ```
 HCLG = H ∘ C ∘ L ∘ G
@@ -163,9 +165,9 @@ HCLG = H ∘ C ∘ L ∘ G
 
 각 컴포넌트를 하나씩 자세히 살펴보자.
 
-### H 트랜스듀서: HMM 상태 변환
+### H transducer: HMM 상태 변환
 
-`H` 트랜스듀서는 **HMM 상태(또는 PDF-ID)를 문맥 의존적 음소(CD-phone)로 변환**하는 역할을 한다. 이는 음향 모델의 출력과 발음 모델 사이의 연결고리이다.
+`H` transducer는 **`HMM 상태(또는 PDF-ID)`를 `문맥 의존적 음소(CD-phone)`로 변환**하는 역할을 한다. 이는 음향 모델의 출력과 발음 모델 사이의 연결고리이다.
 
 #### 입력과 출력 심볼
 
@@ -174,8 +176,8 @@ HCLG = H ∘ C ∘ L ∘ G
 
 #### 구체적인 예시
 
-실제 Kaldi에서 `H.fst`의 일부를 살펴보면:
-
+실제 Kaldi에서 `H.fst`의 일부를 살펴보면 아래와 예시 포맷을 발견할 수 있다.
+'출발_상태(State) 도착_상태(State) 입력_심볼(Symbol) 출력_심볼(Symbol) [가중치]'
 ```
 0 1 1 11001 0.4
 1 2 2 11001 0.6
@@ -183,13 +185,13 @@ HCLG = H ∘ C ∘ L ∘ G
 ```
 
 이 예시에서:
-- 상태 0에서 상태 1로의 전이는 HMM 상태 1을 입력으로 받아 문맥 의존적 음소 11001을 출력하며 가중치는 0.4
+- 상태 0에서 상태 1로의 전이는 입력 심볼 1 (HMM transition-ID 1)을 받아서(소비하고), 출력 심볼 11001 (문맥 의존적 음소 ID)을 내보내며, 이 전이의 가중치는 0.4입니다.
 - 이런 식으로 음향 모델이 인식한 상태 시퀀스를 통해 음소 시퀀스로 변환
 
 HMM 상태는 음향 모델 학습 시 결정된 결정 트리(decision tree)에 의해 클러스터링된 상태를 의미한다. 예를 들어 PDF-ID 1은 특정 문맥에서의 /a/ 음소의 시작 부분을 나타낼 수 있다.
 
 ```python
-# H 트랜스듀서 생성 의사 코드
+# H transducer 생성 의사 코드
 for each context_dependent_phone in cd_phones:
     for each state in hmm_topology[context_dependent_phone]:
         add_transition(
@@ -203,16 +205,16 @@ for each context_dependent_phone in cd_phones:
 
 실제로 Kaldi에서는 HMM 토폴로지 파일을 통해 각 음소의 HMM 구조를 정의하며, 일반적으로 3-상태 left-to-right 구조를 사용한다.
 
-### C 트랜스듀서: 문맥 의존성 처리
+### C transducer: 문맥 의존성 처리
 
-`C` 트랜스듀서는 **문맥 의존적 음소(CD-phone)를 기본 음소(basephone)로 변환**하는 역할을 한다. 이는 음향 모델에서 사용하는 풍부한 문맥 정보를 발음 사전에서 사용하는 기본 음소로 매핑한다.
+`C` transducer는 **`문맥 의존적 음소(CD-phone)`를 `기본 음소(basephone)`로 변환**하는 역할을 한다. 이는 음향 모델에서 사용하는 풍부한 문맥 정보를 발음 사전에서 사용하는 기본 음소로 매핑한다.
 
 #### 입력과 출력 심볼
 
 - **입력**: 문맥 의존적 음소 ID (예: 좌우 문맥을 포함한 triphone)
 - **출력**: 기본 음소 ID (context-independent phone)
 
-#### 구체적인 예시
+#### 구체적인 예시 (`C.fst`)
 
 ```
 0 1 11001 p_a 0.0
@@ -221,14 +223,18 @@ for each context_dependent_phone in cd_phones:
 ```
 
 이 예시에서:
-- 문맥 의존적 음소 11001은 기본 음소 p_a로 매핑됨 (p 다음에 오는 a를 의미)
-- 문맥 의존적 음소 11002는 기본 음소 a로 매핑됨
+- FST의 상태 0에서 상태 1로 이동하는 전이는, 입력 심볼 11001 을 받으면 (즉, 음향 모델이 이 문맥 의존적 음소 ID에 해당하는 소리를 감지하면), 출력 심볼 p_a 를 내보냅니다.
+이 변환의 가중치(비용) 는 0.0 입니다 (일반적으로 로그 확률 공간에서 0은 확률 1을 의미, 즉 비용 없음).
+- FST의 상태 1에서 상태 2로 이동하는 전이는, 입력 심볼 11002 를 받으면 (다른 문맥을 가진 /a/ 소리일 수 있습니다), 출력 심볼 a 를 내보냅니다. 가중치는 0.0 입니다.
 - 여기서 p_a는 위치 의존적 음소(position-dependent phone)로, 단어 시작 위치의 a를 의미
 
 Kaldi에서는 위치 정보(시작, 중간, 끝)도 음소에 포함시켜 더 정확한 모델링을 가능하게 한다.
 
+#### 왜 H.fst 로만 사용하지 않고 C.fst를 사용할까?
+- 음향 모델은 미세한 소리 차이를 구분하기 위해 많은 문맥 의존적 음소를 사용하지만, 발음 사전에는 모든 문맥 변화를 기록하기 어려우므로, 이 둘 사이를 연결해주는 C.fst가 필요하다.
+
 ```python
-# C 트랜스듀서 생성 의사 코드
+# C transducer 생성 의사 코드
 for each context_dependent_phone in cd_phones:
     base_phone = get_base_phone(context_dependent_phone)
     add_transition(
@@ -240,9 +246,9 @@ for each context_dependent_phone in cd_phones:
     )
 ```
 
-### L 트랜스듀서: 발음 사전
+### L transducer: 발음 사전
 
-`L` 트랜스듀서는 **음소 시퀀스를 단어로 변환**하는 발음 사전(lexicon)을 나타낸다. 이는 단어의 다양한 발음 변이를 처리한다.
+`L` transducer는 **`음소 시퀀스`를 `단어`로 변환**하는 발음 사전(lexicon)을 나타낸다. 이는 단어의 다양한 발음 변이를 처리한다.
 
 #### 입력과 출력 심볼
 
@@ -261,10 +267,10 @@ Kaldi에서 `L.fst`의 일부를 보면:
 ```
 
 이 예시에서:
-- 음소 시퀀스 "p_a a n"은 단어 "PANDA"로 매핑됨
+- FST의 상태 0(시작 상태)에서 상태 1로 이동하는 전이는, 입력 심볼 p_a 를 받으면 (즉, 이전 단계 HC.fst에서 이 음소가 출력되면), 출력 심볼 <eps> (엡실론, epsilon)을 내보낸다.
 - <eps>는 입실론(epsilon) 전이로, 입력 또는 출력 없이 상태 전이가 가능함을 의미
 
-L 트랜스듀서는 동일한 단어에 대한 여러 발음 변이를 포함할 수 있다:
+L transducer는 동일한 단어에 대한 여러 발음 변이를 포함할 수 있다:
 
 ```
 # "TOMATO"의 여러 발음 변이
@@ -284,11 +290,14 @@ L 트랜스듀서는 동일한 단어에 대한 여러 발음 변이를 포함�
 5 6 ow <eps> 0.0
 6 7 <eps> TOMATO -1.61
 ```
+해석: FST는 상태 0에서 시작하여 차례대로 "t_b", "ax", "m", "ey", "t", "ow" 음소 시퀀스를 입력으로 받는다. <br>
+이 과정 동안에는 계속 출력으로 <eps>(아무것도 없음)를 내보낸다. <br>
+모든 음소가 입력된 후(상태 6 도달), 마지막 전이에서 더 이상 음소 입력 없이(<eps>) 최종 단어 "TOMATO"를 출력한다.
 
-여기서 가중치(예: -0.69, -1.61)는 각 발음 변이의 확률을 나타낸다. 값이 작을수록 더 높은 확률을 의미한다.
+여기서 가중치(예: -0.69, -1.61)는 각 발음 변이의 확률을 나타낸다. 이 값은 로그값으로 값이 작을수록 더 높은 확률을 의미한다.
 
 ```python
-# L 트랜스듀서 생성 의사 코드
+# L transducer 생성 의사 코드
 for each word in vocabulary:
     for each pronunciation in pronunciations[word]:
         current_state = start_state
@@ -314,9 +323,9 @@ for each word in vocabulary:
         )
 ```
 
-### G 트랜스듀서: 언어 모델
+### G transducer: 언어 모델
 
-`G` 트랜스듀서는 **단어 시퀀스의 확률을 모델링**하는 언어 모델을 나타낸다. 일반적으로 n-gram 언어 모델을 WFST 형태로 변환한 것이다.
+`G` transducer는 **단어 시퀀스의 확률을 모델링**하는 언어 모델을 나타낸다. 일반적으로 n-gram 언어 모델을 WFST 형태로 변환한 것이다.
 
 #### 입력과 출력 심볼
 
@@ -341,12 +350,12 @@ for each word in vocabulary:
 이 예시에서:
 - 상태 1은 문장 시작(\<s\>) 다음에 올 수 있는 단어들을 나타냄
 - "I" 다음에는 "AM"(-0.7)이나 "HAVE"(-1.2)가 올 수 있으며, "AM"이 더 높은 확률을 가짐
-- 가중치는 로그 확률을 나타내므로, 값이 작을수록 더 높은 확률을 의미
+- 가중치는 로그 확률을 나타내므로, 값이 작을수록(0에 가까울수록) 더 높은 확률을 의미
 
-실제 G 트랜스듀서는 훨씬 더 복잡하며, 백오프(backoff) 아크를 포함하여 학습 데이터에서 보지 못한 n-gram도 처리할 수 있다.
+실제 G transducer는 훨씬 더 복잡하며, 백오프(backoff) 아크를 포함하여 학습 데이터에서 보지 못한 n-gram도 처리할 수 있다.
 
 ```python
-# G 트랜스듀서 생성 의사 코드 (bigram 예시)
+# G transducer 생성 의사 코드 (bigram 예시)
 for each word1 in vocabulary:
     for each word2 in vocabulary:
         if bigram_exists(word1, word2):
@@ -371,11 +380,11 @@ for each word1 in vocabulary:
 
 ### HCLG 합성 과정과 최적화
 
-이제 네 개의 트랜스듀서가 어떻게 하나의 `HCLG.fst`로 합성되는지 살펴보자.
+이제 네 개의 transducer가 어떻게 하나의 `HCLG.fst`로 합성되는지 살펴보자.
 
 #### 합성 순서
 
-합성 순서는 매우 중요하며, 일반적으로 다음과 같은 단계를 따른다:
+합성 순서는 매우 중요하며, 일반적으로 다음과 같은 단계를 따른다.
 
 1. **L ∘ G**: 먼저 발음 사전과 언어 모델을 합성하여 음소 시퀀스에서 단어 시퀀스로의 매핑을 구성
 2. **C ∘ (L ∘ G)**: 문맥 의존적 음소와 위 결과를 합성하여 문맥 정보 통합
@@ -387,14 +396,14 @@ for each word1 in vocabulary:
 
 #### 핵심 최적화 기법
 
-단순히 네 개의 트랜스듀서를 합성하는 것으로는 효율적인 디코딩 그래프를 얻을 수 없다. Kaldi는 다양한 최적화 기법을 적용한다:
+단순히 네 개의 transducer를 합성하는 것으로는 효율적인 디코딩 그래프를 얻을 수 없다. Kaldi는 다양한 최적화 기법을 적용한다.
 
 1. **결정화(Determinization)**: 각 단계 후 결정적 WFST로 변환하여 중복 경로 제거
 2. **최소화(Minimization)**: 상태와 전이 수를 최소화하여 그래프 크기 축소
 3. **가중치 푸시(Weight Pushing)**: 가중치를 그래프 앞쪽으로 재분배하여 탐색 효율성 향상
 4. **에필론 제거(Epsilon Removal)**: 가능한 많은 입실론 전이를 제거하여 그래프 간소화
 
-실제 Kaldi의 HCLG 그래프 생성 스크립트 일부를 보면:
+실제 Kaldi의 HCLG 그래프 생성 스크립트 일부를 보면,
 
 ```bash
 # L과 G 합성
@@ -443,7 +452,7 @@ for each frame in utterance:
 
 #### 성능에 영향을 미치는 요소
 
-HCLG 디코딩의 성능은 다양한 요소에 의해 영향을 받는다:
+HCLG 디코딩의 성능은 다양한 요소에 의해 영향을 받는다.
 
 1. **그래프 크기**: 더 큰 그래프는 더 많은 메모리를 사용하고 검색 시간이 증가
 2. **빔 너비(Beam Width)**: 넓은 빔은 정확도를 향상시키지만 속도를 저하
@@ -458,10 +467,10 @@ End-to-End(E2E) ASR 시스템이 대세가 되면서, WFST 기반 디코딩도 �
 
 ### E2E ASR과 전통적 ASR의 디코딩 차이점
 
-전통적인 HMM-GMM/DNN 기반 시스템과 E2E 시스템의 가장 큰 차이점은 출력 단위에 있다:
+전통적인 HMM-GMM/DNN 기반 시스템과 E2E 시스템의 가장 큰 차이점은 `출력 단위`에 있다.
 
 - **전통적 시스템**: 음향 모델은 HMM 상태(또는 음소) 확률 출력
-- **E2E 시스템**: 모델은 직접 토큰(음소, 워드피스, 문자 등) 확률 출력
+- **E2E 시스템**: 모델은 `직접 토큰`(음소, 워드피스, 문자 등) 확률 출력
 
 이러한 차이로 인해 디코딩 그래프 구성도 달라져야 한다. WeNet에서는 E2E 모델의 출력에 맞게 간소화된 `TLG` 디코딩 그래프를 사용한다.
 
@@ -475,9 +484,9 @@ TLG = T ∘ L ∘ G
 
 각 컴포넌트를 자세히 살펴보자.
 
-#### T 트랜스듀서: 토큰 변환
+#### T transducer: 토큰 변환
 
-`T` 트랜스듀서는 **E2E 모델의 출력 토큰을 발음 사전의 입력 단위로 변환**하는 역할을 한다. Kaldi의 H, C와 유사하지만 훨씬 단순하다.
+`T` transducer는 **`E2E 모델의 출력 토큰`을 `발음 사전의 입력 단위`로 변환** 하는 역할을 한다. Kaldi의 H, C와 유사하지만 훨씬 단순하다.
 
 ##### 입력과 출력 심볼
 
@@ -509,7 +518,7 @@ TLG = T ∘ L ∘ G
 ```
 
 ```python
-# T 트랜스듀서 생성 의사 코드
+# T transducer 생성 의사 코드
 for each token in e2e_model_output_tokens:
     phoneme_sequence = token_to_phoneme_mapping[token]
     
@@ -546,12 +555,12 @@ for each token in e2e_model_output_tokens:
             current_state = next_state
 ```
 
-#### L과 G 트랜스듀서
+#### L과 G transducer
 
-WeNet의 `L`과 `G` 트랜스듀서는 Kaldi의 것과 개념적으로 동일하다. 다만 E2E 시스템의 특성에 맞게 일부 조정이 있을 수 있다.
+WeNet의 `L`과 `G` transducer는 Kaldi의 것과 개념적으로 동일하다. 다만 E2E 시스템의 특성에 맞게 일부 조정이 있을 수 있다.
 
-- **L 트랜스듀서**: 음소 시퀀스를 단어로 변환
-- **G 트랜스듀서**: 단어 시퀀스의 확률 모델링
+- **L transducer**: 음소 시퀀스를 단어로 변환
+- **G transducer**: 단어 시퀀스의 확률 모델링
 
 ### TLG 디코딩 프로세스의 특징
 
@@ -574,107 +583,6 @@ Token 3: {"AH": 0.5, "EH": 0.3, "AA": 0.1, ...}
 ...
 ```
 
-#### 2. 외부 언어 모델과 E2E 모델의 결합
-
-WeNet의 TLG 디코딩은 E2E 모델의 출력과 외부 언어 모델을 효과적으로 결합한다. 이를 위해 일반적으로 다음과 같은 점수 결합 방식을 사용한다:
-
-```
-Score = α * log(P_am) + β * log(P_lm) + γ * word_insertion_penalty
-```
-
-여기서:
-- `P_am`: E2E 모델(음향 모델)의 토큰 확률
-- `P_lm`: 언어 모델의 단어 확률
-- `α`, `β`, `γ`: 가중치 하이퍼파라미터
-
-이는 코드로 다음과 같이 구현된다:
-
-```cpp
-// WeNet TLG 디코딩 의사 코드 (간략화됨)
-for each token_step in e2e_output:
-    token_probabilities = e2e_model_output[token_step]
-    
-    for each active_token in active_tokens:
-        state = active_token.state
-        for each arc in fst.arcs(state):
-            input_symbol = arc.input_symbol
-            if input_symbol in token_probabilities:
-                acoustic_score = log(token_probabilities[input_symbol])
-                combined_score = alpha * acoustic_score + arc.weight  // arc.weight는 이미 LM 점수 포함
-                
-                next_state = arc.next_state
-                new_token = Token(next_state, combined_score, output_symbol=arc.output_symbol)
-                add_to_next_tokens(new_token)
-    
-    // 토큰 정리 (pruning)
-    prune_tokens(next_tokens, beam_width)
-    active_tokens = next_tokens
-```
-
-#### 3. 빔 서치 최적화
-
-E2E 시스템에서는 디코딩 스텝이 적기 때문에, 더 넓은 빔을 사용하더라도 전체 디코딩 시간이 크게 증가하지 않는다. WeNet은 이를 활용한 최적화 전략을 채택한다:
-
-- **히스토그램 프루닝(Histogram Pruning)**: 각 상태에서 상위 N개의 토큰만 유지
-- **적응적 빔 조정**: 토큰 분포에 따라 빔 너비를 동적으로 조정
-
-```cpp
-// 히스토그램 프루닝 의사 코드
-void HistogramPruning(vector<Token>& tokens, int max_tokens) {
-    if (tokens.size() <= max_tokens) return;
-    
-    // 비용 기준 정렬
-    sort(tokens.begin(), tokens.end(), 
-         [](const Token& a, const Token& b) { return a.cost < b.cost; });
-    
-    // 상위 max_tokens만 유지
-    tokens.resize(max_tokens);
-}
-```
-
-#### 4. 디코딩 속도 최적화
-
-WeNet의 TLG 디코딩은 속도를 위해 다양한 최적화 기법을 도입했다:
-
-- **동적 그래프 확장(On-the-fly Graph Expansion)**: 필요한 부분만 메모리에 로드
-- **탐색 공간 제한**: 토큰 히스토리 기반 그룹화로 중복 탐색 방지
-- **병렬 디코딩**: 여러 발화를 병렬로 처리
-
-```cpp
-// 동적 그래프 확장 의사 코드
-class LazyFstExpander {
-public:
-    vector<Arc> GetArcs(int state_id) {
-        if (expanded_states_.find(state_id) != expanded_states_.end()) {
-            return expanded_states_[state_id];
-        }
-        
-        // 필요시 상태 확장
-        vector<Arc> arcs = ExpandState(state_id);
-        expanded_states_[state_id] = arcs;
-        return arcs;
-    }
-    
-private:
-    unordered_map<int, vector<Arc>> expanded_states_;
-};
-```
-
-### TLG vs HCLG: 실전 비교
-
-WeNet의 TLG와 Kaldi의 HCLG를 실제 사용 측면에서 비교해보자:
-
-#### 1. 그래프 크기
-
-```
-| 모델 타입 | 어휘 크기 | 그래프 크기 |
-|---------|---------|-----------|
-| HCLG    | 65K     | ~1GB      |
-| TLG     | 65K     | ~100MB    |
-```
-
-TLG는 E2E 모델의 출력이 이미 고수준 단위(음소 또는 그 이상)이므로 H, C 부분이 크게 단순화되어 전체 그래프 크기가 획기적으로 줄어든다.
-
 #### 2. 디코딩 속도
 
 ```
@@ -685,6 +593,17 @@ TLG는 E2E 모델의 출력이 이미 고수준 단위(음소 또는 그 이상)
 ```
 
 TLG는 디코딩 스텝이 적고 그래프가 작아 더 빠른 속도와 적은 메모리 사용을 보인다.
+
+##### 실제 구현 시 성능 고려사항
+
+위 표는 일반적인 경향을 보여주지만, **실제 구현에서는 TLG 기반 디코딩이 항상 HCLG보다 빠르지 않을 수 있다.** 만약 직접 구현한 TLG 시스템이 예상보다 느리다면 다음과 같은 요인들을 고려해 볼 수 있다.
+
+1.  **구현 및 최적화 수준:** Kaldi의 WFST 연산과 디코더는 고도로 최적화된 C++ 코드이다. 사용한 FST 라이브러리나 직접 구현한 디코더의 최적화 수준이 Kaldi보다 낮으면 속도 차이가 발생할 수 있다. 특히 그래프 결정화/최소화, 빔 서치 알고리즘(가지치기, 상태 관리 등)의 효율성이 중요하다.
+2.  **E2E 모델 특성:** 문자 단위 출력 E2E 모델은 음소 기반보다 더 긴 토큰 시퀀스를 생성할 수 있어, FST 탐색 스텝 수가 늘어날 수 있다. 또한 E2E 모델 자체의 순방향 계산 속도도 전체 디코딩 시간에 영향을 준다.
+3.  **디코딩 파라미터:** 비교 대상인 HCLG 시스템과 동일하거나 유사한 조건(빔 크기, 가지치기 임계값 등)에서 속도를 측정했는지 확인해야 한다. TLG에서 더 넓은 빔을 사용했다면 속도는 당연히 느려진다.
+4.  **그래프 구성:** `T.fst`나 `L.fst`의 구성 방식이 비효율적이거나 그래프 크기가 과도하게 커졌을 수도 있다.
+
+따라서 TLG의 이론적 장점에도 불구하고, 실제 성능은 구현 디테일, 사용된 모델, 비교 환경 설정에 따라 달라질 수 있다는 점을 유의해야 한다. 최적의 성능을 위해서는 디코딩 과정의 병목 현상을 분석하고, WeNet 등에서 사용하는 최적화 기법(예: 동적 그래프 확장, 히스토그램 프루닝)을 참고하는 것이 좋다.
 
 #### 3. 인식 정확도
 
@@ -705,18 +624,18 @@ TLG는 디코딩 스텝이 적고 그래프가 작아 더 빠른 속도와 적�
 | 저자원 언어       | HCLG 유리   | 언어 특화 지식을 명시적으로 통합 가능       |
 ```
 
-## 결론: 미래의 디코딩 방향
+## 마무리
 
 WFST 기반 디코딩은 음성 인식 시스템의 핵심 구성 요소로 자리잡았으며, 전통적인 HCLG에서 E2E 시스템을 위한 TLG로 진화하고 있다. 둘 다 각자의 장단점이 있으며, 특정 응용 시나리오에 따라 적절한 선택이 필요하다.
 
-미래의 디코딩 방향은 다음과 같을 것으로 예상된다:
+미래의 디코딩 방향은 다음과 같을 것으로 예상된다.
 
 1. **하이브리드 접근법**: E2E 모델의 강점과 WFST의 유연성을 결합한 방식
 2. **동적 그래프 생성**: 실행 시간에 컨텍스트에 맞게 디코딩 그래프를 조정
 3. **개인화된 디코딩**: 사용자 특화 언어 모델과 발음 변이를 포함
 4. **멀티모달 통합**: 비디오, 텍스트 등 다양한 모달리티의 정보를 디코딩에 활용
 
-어떤 방식을 선택하든, WFST 기반 디코딩의 핵심 원리를 이해하는 것은 ASR 시스템 개발자에게 필수적인 지식이다. 이 글이 복잡한 WFST 디코딩 그래프의 내부 구조를 이해하는 데 도움이 되었기를 바란다.
+어떤 방식을 선택하든, WFST 기반 디코딩의 핵심 원리를 이해하는 것은 ASR 시스템 개발자에게 필수적인 지식이다. 이 글이 복잡한 WFST 디코딩 그래프의 내부 구조를 이해하는 데 조금이라도 도움이 되었기를 바라며, 이 글을 마친다.
 
 ## References
 
