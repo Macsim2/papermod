@@ -61,7 +61,7 @@ disableShare: true # 底部不显示分享栏
 * [CTC Loss](/posts/tech/asr/ctc_loss)
 * [\[WIP\]RNN-T Loss](/posts/tech/asr/rnnt_loss)
 * [\[WIP\]Wav2vec 2.0](/posts/tech/deeplearning/fine-tune_curious)
-* TLG HLG?
+* [\[WIP\]TLG HCLG](/posts/tech/asr/tlg_hclg)
 
 ## Algorithms
 * BOJ
